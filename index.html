@@ -240,7 +240,7 @@ function App(){
       const hdrs={"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"};
       let r1;
       try{
-        r1=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mt,data:b64}},{type:"text",text:'Product ID for Vinted UK. Respond ONLY JSON, no markdown. Fields: "product_name" (brand+model+colour), "category" (Womenswear/Menswear/Kids/Home/Entertainment/Electronics/Sports/Other), "estimated_price_gbp" (number), "brand" (or "Unbranded"), "key_features" (3-6 strings array), "condition_guess" (New with tags/New without tags/Very good/Good/Satisfactory)'}]}]})});
+        r1=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs,body:JSON.stringify({model:"claude-sonnet-5",max_tokens:4000,output_config:{effort:"low"},messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mt,data:b64}},{type:"text",text:'Product ID for Vinted UK. Respond ONLY JSON, no markdown. Fields: "product_name" (brand+model+colour), "category" (Womenswear/Menswear/Kids/Home/Entertainment/Electronics/Sports/Other), "estimated_price_gbp" (number), "brand" (or "Unbranded"), "key_features" (3-6 strings array), "condition_guess" (New with tags/New without tags/Very good/Good/Satisfactory)'}]}]})});
       }catch(fetchErr){
         throw new Error("Network error: "+fetchErr.message+". Key starts with: "+apiKey.substring(0,10)+"...")
       }
@@ -251,7 +251,7 @@ function App(){
       const d1=await r1.json(),t1=d1.content.map(i=>i.text||"").join(""),p=JSON.parse(t1.replace(/```json|```/g,"").trim());
       setTitle(p.product_name||"");setCat(p.category||"Other");setBrand(p.brand||"");setBInput(p.brand||"");setPrice(String(p.estimated_price_gbp||""));setFeats(p.key_features||[]);setCond(p.condition_guess||"Good");
       setLoadMsg("Writing description...");
-      const r2=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`Write a Vinted listing for: ${p.product_name}. Brand: ${p.brand}. Features: ${(p.key_features||[]).join(", ")}. Friendly, 100-150 words. No hashtags/emojis. Return ONLY description text.`}]})});
+      const r2=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:hdrs,body:JSON.stringify({model:"claude-sonnet-5",max_tokens:4000,output_config:{effort:"low"},messages:[{role:"user",content:`Write a Vinted listing for: ${p.product_name}. Brand: ${p.brand}. Features: ${(p.key_features||[]).join(", ")}. Friendly, 100-150 words. No hashtags/emojis. Return ONLY description text.`}]})});
       if(!r2.ok){let eb="";try{eb=await r2.text()}catch(e){}throw new Error("Description API "+r2.status+": "+eb.substring(0,200))}
       const d2=await r2.json();setDesc(d2.content.map(i=>i.text||"").join("").trim());setTab("edit");
     }catch(e){setErr(e.message)}finally{setLoading(false);setLoadMsg("")}

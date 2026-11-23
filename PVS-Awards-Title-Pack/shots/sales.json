@@ -1,0 +1,10 @@
+{
+  "name": "sales",
+  "note": "The approved v02 shot: label turns in gold-edge first, the figure flips into place, impact at 3.56 s.",
+  "lines": [
+    { "text": "1,248", "counter": { "mode": "flip", "at": 1.88, "duration": 1.68 } },
+    { "text": "SALES", "in": { "type": "turn", "at": 0, "duration": 1.96 } }
+  ],
+  "camera": { "move": "reveal" },
+  "effects": { "sweep": true, "glint": true, "shake": 0.3, "bloom": 0.35, "streak": 0.5 }
+}

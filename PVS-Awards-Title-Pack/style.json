@@ -1,0 +1,23 @@
+{
+  "font": "assets/Archivo-BlackExpanded.ttf",
+  "x_scale": 1.08,
+  "tracking": 0.94,
+  "extrude": 0.2,
+  "bevel": 0.016,
+  "digit_gap": 0.05,
+  "line_gap": 0.7,
+  "max_width": 9.3,
+
+  "silver": [0.86, 0.88, 0.92],
+  "gold": [0.86, 0.51, 0.20],
+  "face_roughness": 0.015,
+  "gold_roughness": 0.2,
+  "background": [0.014, 0.011, 0.009],
+
+  "silk_strength": 1.0,
+  "band_strength": 4.0,
+  "band_width": 0.42,
+  "band_height": 0.26,
+  "gold_bounce": 2.2,
+  "practicals": 36
+}

@@ -1,0 +1,45 @@
+{
+  "name": "alphabet",
+  "note": "Character-set proof. Render stills only:  python3 make.py shots/alphabet.json --stills last",
+  "lines": [
+    {
+      "text": "ABCDEFGHIJKLM",
+      "height": 0.62,
+      "in": {
+        "type": "cut"
+      }
+    },
+    {
+      "text": "NOPQRSTUVWXYZ",
+      "height": 0.62,
+      "in": {
+        "type": "cut"
+      }
+    },
+    {
+      "text": "0123456789",
+      "height": 0.62,
+      "in": {
+        "type": "cut"
+      }
+    },
+    {
+      "text": "£$€%&+-.,!?:;'/()#@",
+      "height": 0.62,
+      "in": {
+        "type": "cut"
+      }
+    }
+  ],
+  "style": {
+    "line_gap": 0.45
+  },
+  "duration": 1.0,
+  "camera": {
+    "move": "static"
+  },
+  "effects": {
+    "sweep": false,
+    "glint": false
+  }
+}

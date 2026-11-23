@@ -1,0 +1,45 @@
+{
+  "name": "awards-night",
+  "note": "Hero title card. Two slams a beat apart, hard shake, then both lines fly past the lens.",
+  "lines": [
+    {
+      "text": "AWARDS",
+      "height": 1.35,
+      "in": {
+        "type": "slam",
+        "at": 0.6
+      },
+      "out": {
+        "type": "push",
+        "at": 4.6
+      }
+    },
+    {
+      "text": "NIGHT",
+      "height": 1.35,
+      "in": {
+        "type": "slam",
+        "at": 1.2
+      },
+      "out": {
+        "type": "push",
+        "at": 4.75
+      }
+    }
+  ],
+  "duration": 5.6,
+  "camera": {
+    "move": "push_in"
+  },
+  "effects": {
+    "sweep": {
+      "at": 1.4,
+      "duration": 2.4
+    },
+    "glint": true,
+    "shake": 1.0,
+    "motion_blur": true,
+    "bloom": 0.45,
+    "streak": 0.8
+  }
+}

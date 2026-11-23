@@ -1,0 +1,37 @@
+{
+  "name": "instructions",
+  "note": "Longest label. Letters flip up in a fast cascade; the figure arrives from deep in the set. Runs at 1.4x speed.",
+  "speed": 1.4,
+  "lines": [
+    {
+      "text": "2,906",
+      "in": {
+        "type": "push",
+        "at": 0.9
+      }
+    },
+    {
+      "text": "INSTRUCTIONS",
+      "in": {
+        "type": "flip",
+        "at": 0.1,
+        "stagger": 0.05
+      },
+      "out": {
+        "type": "turn",
+        "at": 4.2
+      }
+    }
+  ],
+  "duration": 5.0,
+  "camera": {
+    "move": "static"
+  },
+  "effects": {
+    "sweep": true,
+    "glint": true,
+    "shake": 0.0,
+    "bloom": 0.35,
+    "streak": 0.5
+  }
+}

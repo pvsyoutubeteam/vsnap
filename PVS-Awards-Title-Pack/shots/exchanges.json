@@ -1,0 +1,32 @@
+{
+  "name": "exchanges",
+  "note": "Label rises letter by letter, then the figure counts up from zero.",
+  "lines": [
+    {
+      "text": "3,470",
+      "counter": {
+        "mode": "count",
+        "at": 1.2,
+        "duration": 2.0
+      }
+    },
+    {
+      "text": "EXCHANGES",
+      "in": {
+        "type": "rise",
+        "at": 0.2,
+        "stagger": 0.05
+      }
+    }
+  ],
+  "camera": {
+    "move": "push_in"
+  },
+  "effects": {
+    "sweep": true,
+    "glint": true,
+    "shake": 0.4,
+    "bloom": 0.35,
+    "streak": 0.5
+  }
+}

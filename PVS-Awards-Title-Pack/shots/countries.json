@@ -1,0 +1,47 @@
+{
+  "name": "countries",
+  "note": "Two-line label dropping in over a small counted figure. Soft focus at the start.",
+  "lines": [
+    {
+      "text": "12",
+      "height": 1.7,
+      "counter": {
+        "mode": "count",
+        "at": 1.5,
+        "duration": 1.2
+      }
+    },
+    {
+      "text": "COUNTRIES",
+      "height": 0.6,
+      "in": {
+        "type": "drop",
+        "at": 0.2,
+        "stagger": 0.04
+      }
+    },
+    {
+      "text": "LAUNCHED IN",
+      "height": 0.6,
+      "in": {
+        "type": "drop",
+        "at": 0.6,
+        "stagger": 0.04
+      }
+    }
+  ],
+  "style": {
+    "line_gap": 0.5
+  },
+  "camera": {
+    "move": "pull_back"
+  },
+  "effects": {
+    "sweep": true,
+    "glint": true,
+    "shake": 0.3,
+    "dof": true,
+    "bloom": 0.35,
+    "streak": 0.5
+  }
+}

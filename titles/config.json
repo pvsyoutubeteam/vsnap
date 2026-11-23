@@ -1,5 +1,5 @@
 {
-  "output": { "width": 1920, "height": 1080, "fps": 25, "duration": 40 },
+  "output": { "width": 3840, "height": 2160, "fps": 25, "duration": 40 },
 
   "font": "fonts/Archivo-BlackExpanded.ttf",
 
@@ -20,8 +20,8 @@
     "liquid": 0.10,
     "sideBrush": 0.5,
     "edgeGlass": 1.0,
-    "bloom": 0.35,
-    "flare": 0.5,
+    "bloom": 0.12,
+    "flare": 0.16,
     "flareTint": [1.0, 0.82, 0.58],
     "flareThreshold": 2.2,
     "bokeh": 1.0,

@@ -3,9 +3,11 @@
 //
 //   node render.mjs still  --card 4 --t 3.2 [--scale 0.5] [--layer comp|title|bg]
 //   node render.mjs sheet  [--scale 0.5]            contact sheet: every card at 3 moments
-//   node render.mjs render [--scale 1] [--only title_04,bg] [--config config.json]
+//   node render.mjs render [--scale 1] [--only title_04,bg] [--config config.json] [--media DIR]
+//   node render.mjs fcpxml --media DIR              rewrite the timeline to point at DIR
 //
-// "render" writes into out/: one ProRes 4444 clip with alpha per card, a ProRes 422 HQ
+// "render" writes into out/: per card a clean ProRes 4444 title clip and a matching
+// *_flare clip (both with alpha), a ProRes 422 HQ
 // background plate, preview.mp4, and ChromeTitles.fcpxml which lays them out on a
 // Final Cut Pro timeline (background in the primary storyline, titles connected above).
 import http from 'node:http';
@@ -23,6 +25,7 @@ const opt = (name, def) => { const i = args.indexOf('--' + name); return i < 0 ?
 const cfg = JSON.parse(fs.readFileSync(path.resolve(ROOT, opt('config', 'config.json')), 'utf8'));
 const scale = parseFloat(opt('scale', '1'));
 const OUT = path.resolve(ROOT, opt('out', 'out'));
+const MEDIA = opt('media') ? path.resolve(opt('media')) : OUT;   // folder the .mov files will live in on the editing Mac
 fs.mkdirSync(path.join(OUT, 'stills'), { recursive: true });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.ttf': 'font/ttf', '.otf': 'font/otf' };
@@ -58,14 +61,20 @@ async function renderClip(layer, cardIndex, frames, file, label) {
   const codec = layer === 'title'
     ? ['-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le', '-alpha_bits', '16']
     : ['-c:v', 'prores_ks', '-profile:v', '3', '-pix_fmt', 'yuv422p10le'];
-  const ff = ffmpeg(['-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'png', '-i', '-', ...codec,
-    '-vendor', 'apl0', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-r', String(fps), file]);
+  const enc = (f) => ffmpeg(['-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'png', '-i', '-', ...codec,
+    '-vendor', 'apl0', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-r', String(fps), f]);
+  // a title card is written as two clips from one pass: clean chrome, and its glow/flare
+  const outs = layer === 'title' ? [enc(file), enc(file.replace(/\.mov$/, '_flare.mov'))] : [enc(file)];
+  const b64 = (u) => Buffer.from(u.split(',')[1], 'base64');
   const t0 = Date.now();
   for (let i = 0; i < frames; i++) {
-    await write(ff.stdin, await frame(page, { layer, card: cardIndex, t: i / fps }));
+    const o = { layer, card: cardIndex, t: i / fps };
+    const bufs = layer === 'title' ? (await page.evaluate((o) => window.renderPair(o), o)).map(b64) : [await frame(page, o)];
+    await Promise.all(bufs.map((b, j) => write(outs[j].stdin, b)));
     if (i % 25 === 0) console.log(`${label}: ${i}/${frames}  (${((Date.now() - t0) / 1000 / (i + 1)).toFixed(2)} s/frame)`);
   }
-  ff.stdin.end(); await ff.done; await page.close();
+  for (const ff of outs) { ff.stdin.end(); await ff.done; }
+  await page.close();
   console.log(`${label}: done -> ${path.relative(ROOT, file)}`);
 }
 
@@ -76,13 +85,14 @@ function writeFcpxml(size) {
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const asset = (id, name, file, dur, alpha) =>
     `    <asset id="${id}" name="${esc(name)}" start="0s" duration="${T(dur)}" hasVideo="1" format="r1" videoSources="1">\n` +
-    `      <media-rep kind="original-media" src="${pathToFileURL(path.join(OUT, file)).href}"/>\n    </asset>`;
+    `      <media-rep kind="original-media" src="${pathToFileURL(path.join(MEDIA, file)).href}"/>\n    </asset>`;
   const assets = [asset('r2', 'Background plate', 'background.mov', duration)];
   const clips = [];
   cfg.cards.forEach((c, i) => {
     const name = `${c.id} – ${c.lines.join(' ')}`;
-    assets.push(asset(`r${i + 3}`, name, `${c.id}.mov`, c.duration));
-    clips.push(`            <asset-clip ref="r${i + 3}" lane="1" offset="${T(c.start)}" name="${esc(name)}" start="0s" duration="${T(c.duration)}" format="r1" tcFormat="NDF"/>`);
+    const clip = (id, lane, n) => `            <asset-clip ref="${id}" lane="${lane}" offset="${T(c.start)}" name="${esc(n)}" start="0s" duration="${T(c.duration)}" format="r1" tcFormat="NDF"/>`;
+    assets.push(asset(`r${i * 2 + 3}`, name, `${c.id}.mov`, c.duration), asset(`r${i * 2 + 4}`, `${name} (flare)`, `${c.id}_flare.mov`, c.duration));
+    clips.push(clip(`r${i * 2 + 3}`, 1, name), clip(`r${i * 2 + 4}`, 2, `${name} (flare)`));
   });
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE fcpxml>
@@ -148,14 +158,20 @@ try {
       const inputs = ['-i', path.join(OUT, 'background.mov')];
       let chain = '', last = '0:v';
       have.forEach((c, i) => {
-        inputs.push('-itsoffset', String(c.start), '-i', path.join(OUT, `${c.id}.mov`));
-        chain += `[${last}][${i + 1}:v]overlay=eof_action=pass:enable='between(t,${c.start},${c.start + c.duration})'[v${i}];`;
-        last = `v${i}`;
+        for (const [j, f] of [`${c.id}.mov`, `${c.id}_flare.mov`].entries()) {
+          inputs.push('-itsoffset', String(c.start), '-i', path.join(OUT, f));
+          chain += `[${last}][${i * 2 + j + 1}:v]overlay=eof_action=pass:enable='between(t,${c.start},${c.start + c.duration})'[v${i}_${j}];`;
+          last = `v${i}_${j}`;
+        }
       });
       const p = ffmpeg([...inputs, '-filter_complex', chain.slice(0, -1), '-map', `[${last}]`, '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', '-t', String(duration), path.join(OUT, 'preview.mp4')], 'ignore');
       await p.done;
       console.log('preview -> out/preview.mp4');
     }
+    console.log('timeline -> out/ChromeTitles.fcpxml');
+  } else if (cmd === 'fcpxml') {
+    // rewrite only the timeline file, e.g. after moving the clips:  node render.mjs fcpxml --media ~/Movies/ChromeTitles
+    writeFcpxml({ width: Math.round(cfg.output.width * scale / 2) * 2, height: Math.round(cfg.output.height * scale / 2) * 2 });
     console.log('timeline -> out/ChromeTitles.fcpxml');
   } else {
     console.error('unknown command: ' + cmd); process.exitCode = 1;

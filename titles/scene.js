@@ -179,17 +179,18 @@ void main(){
 const COMP_FRAG = /* glsl */`
 precision highp float; varying vec2 vUv;
 uniform sampler2D tScene, tBloom, tBloomWide, tStreak;
-uniform float uExposure, uBloom, uFlare, uOpaque; uniform vec3 uFlareTint;
+uniform float uExposure, uBloom, uFlare; uniform vec3 uFlareTint;
+uniform int uMode;   // 0 flattened+opaque, 1 clean title, 2 glow/flare only
 vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }
 void main(){
   vec4 s = texture2D(tScene, vUv);
   vec3 glow = (texture2D(tBloom, vUv).rgb * 0.6 + texture2D(tBloomWide, vUv).rgb * 0.5) * uBloom
             + texture2D(tStreak, vUv).rgb * uFlareTint * uFlare;
-  vec3 c = aces((s.rgb + glow) * uExposure);
-  c = pow(c, vec3(1.0/2.2));
-  float ga = clamp(max(glow.r, max(glow.g, glow.b)) * uExposure * 1.5, 0.0, 1.0);
-  float a = max(max(s.a, ga), uOpaque);
-  gl_FragColor = vec4(min(c, vec3(a)), a);     // premultiplied, never brighter than alpha
+  vec3 lin = uMode == 0 ? s.rgb + glow : (uMode == 1 ? s.rgb : glow);
+  vec3 c = pow(aces(lin * uExposure), vec3(1.0/2.2));
+  // flare layer carries its own brightness as alpha, so a plain "Normal" composite reads as light
+  float a = uMode == 0 ? 1.0 : (uMode == 1 ? s.a : max(c.r, max(c.g, c.b)));
+  gl_FragColor = vec4(min(c, vec3(a)), a);     // premultiplied
 }`;
 
 // ---------------------------------------------------------------- state
@@ -296,7 +297,7 @@ window.setup = async function (config, scale = 1) {
   mats.bright = shader(BRIGHT_FRAG, { tMap: { value: null }, uThreshold: { value: 1 } });
   mats.blur = shader(BLUR_FRAG, { tMap: { value: null }, uDir: { value: new THREE.Vector2() } });
   mats.comp = shader(COMP_FRAG, { tScene: { value: null }, tBloom: { value: null }, tBloomWide: { value: null }, tStreak: { value: null },
-    uExposure: { value: L.exposure }, uBloom: { value: L.bloom }, uFlare: { value: L.flare }, uOpaque: { value: 0 }, uFlareTint: { value: new THREE.Color(...L.flareTint) } });
+    uExposure: { value: L.exposure }, uBloom: { value: L.bloom }, uFlare: { value: L.flare }, uMode: { value: 0 }, uFlareTint: { value: new THREE.Color(...L.flareTint) } });
 
   const buf = await (await fetch(cfg.font)).arrayBuffer();
   font = new Font(new TTFLoader().parse(buf));
@@ -318,8 +319,9 @@ function blur(src, dst, dx, dy) {
   fsPass(mats.blur, dst);
 }
 
-function post(flareGain, opaque) {
+function post(flareGain, mode, reuse = false) {
   const L = cfg.look, k = W / 1920;
+  if (!reuse) {
   // bloom
   mats.bright.uniforms.tMap.value = rtScene.texture; mats.bright.uniforms.uThreshold.value = 1.0; fsPass(mats.bright, rtA);
   blur(rtA, rtB, 1.2 * k, 0); blur(rtB, rtBloom, 0, 1.2 * k);
@@ -328,13 +330,15 @@ function post(flareGain, opaque) {
   mats.bright.uniforms.uThreshold.value = L.flareThreshold; fsPass(mats.bright, rtS1);
   for (const [i, step] of [1, 2, 3.5, 6, 9, 13].entries()) blur(i % 2 ? rtS2 : rtS1, i % 2 ? rtS1 : rtS2, step * k, 0);
   blur(rtS1, rtS2, 0, 0.8 * k);
+  }
   const u = mats.comp.uniforms;
   u.tScene.value = rtScene.texture; u.tBloom.value = rtBloom.texture; u.tBloomWide.value = rtWide.texture; u.tStreak.value = rtS2.texture;
-  u.uFlare.value = L.flare * flareGain; u.uOpaque.value = opaque ? 1 : 0;
+  u.uFlare.value = L.flare * flareGain; u.uMode.value = mode;
   fsPass(mats.comp, null);
 }
 
-// Render one frame to the WebGL canvas. layer: 'title' (alpha) | 'bg' (opaque).
+// Render one frame to the WebGL canvas. layer: 'title' (clean chrome, alpha) |
+// 'flare' (bloom + anamorphic streaks of that card, alpha) | 'bg' (opaque).
 // For 'title', t is seconds from the start of that card; for 'bg', seconds on the timeline.
 window.drawFrame = function ({ layer, card = 0, t = 0 }) {
   if (layer === 'bg') {
@@ -342,7 +346,7 @@ window.drawFrame = function ({ layer, card = 0, t = 0 }) {
     placeCamera(u); camera.position.z = lerp(22, 19, u); camera.updateMatrixWorld();
     bgMat.uniforms.uTime.value = t; bokehMat.uniforms.uTime.value = t;
     renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(bgScene, camera);
-    post(0.6, true);
+    post(0.6, 0);
     return;
   }
   const c = cards[card], cd = c.card, d = cd.duration, hero = !!cd.hero;
@@ -369,7 +373,7 @@ window.drawFrame = function ({ layer, card = 0, t = 0 }) {
   U.uSweep.value = hero && t > 5.2 ? s2 : s1;
   U.uSweepGain.value = cd.sweep ?? 1; U.uHero.value = hero ? 1 : 0;
   renderer.setRenderTarget(rtScene); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(c.scene, camera);
-  post(cd.flare ?? 1, false);
+  post(cd.flare ?? 1, layer === 'flare' ? 2 : 1);
 };
 
 const out2d = document.createElement('canvas');
@@ -379,7 +383,14 @@ window.renderFrame = function (opts) {
   out2d.width = W; out2d.height = H; const g = out2d.getContext('2d');
   window.drawFrame({ layer: 'bg', t: cfg.cards[opts.card].start + opts.t }); g.drawImage(renderer.domElement, 0, 0);
   window.drawFrame({ layer: 'title', card: opts.card, t: opts.t }); g.drawImage(renderer.domElement, 0, 0);
+  if (!opts.noFlare) { window.drawFrame({ layer: 'flare', card: opts.card, t: opts.t }); g.drawImage(renderer.domElement, 0, 0); }
   return out2d.toDataURL('image/png');
+};
+// title + flare of the same frame; the scene is only rendered once
+window.renderPair = function (opts) {
+  window.drawFrame({ ...opts, layer: 'title' }); const title = renderer.domElement.toDataURL('image/png');
+  post(cfg.cards[opts.card].flare ?? 1, 2, true); const flare = renderer.domElement.toDataURL('image/png');
+  return [title, flare];
 };
 
 // live preview: scene.html?preview  (plays the whole timeline on a loop)
@@ -392,7 +403,7 @@ if (location.search.includes('preview')) {
   (function tick() {
     const t = ((performance.now() - t0) / 1000) % config.output.duration;
     window.drawFrame({ layer: 'bg', t }); g.drawImage(renderer.domElement, 0, 0);
-    config.cards.forEach((c, i) => { if (t >= c.start && t < c.start + c.duration) { window.drawFrame({ layer: 'title', card: i, t: t - c.start }); g.drawImage(renderer.domElement, 0, 0); } });
+    config.cards.forEach((c, i) => { if (t >= c.start && t < c.start + c.duration) { for (const layer of ['title', 'flare']) { window.drawFrame({ layer, card: i, t: t - c.start }); g.drawImage(renderer.domElement, 0, 0); } } });
     requestAnimationFrame(tick);
   })();
 }

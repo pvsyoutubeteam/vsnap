@@ -6,13 +6,20 @@ Liquid-chrome 3D title cards, rendered offline and delivered as layers for Final
 
 | File | What it is |
 |---|---|
-| `title_01.mov` … `title_04.mov` | One clip per card, ProRes 4444 **with alpha** (glow and flare baked in) |
+| `title_01.mov` … `title_04.mov` | One clip per card: clean chrome lettering, ProRes 4444 **with alpha** |
+| `title_01_flare.mov` … | That card's bloom and anamorphic flare on its own, ProRes 4444 with alpha |
 | `background.mov` | 40 s bokeh / haze plate, ProRes 422 HQ |
-| `ChromeTitles.fcpxml` | FCP timeline: background in the primary storyline, each card connected above it |
+| `ChromeTitles.fcpxml` | FCP timeline: background in the primary storyline, titles on lane 1, flares on lane 2 |
 | `preview.mp4` | Flattened preview of the whole timeline |
 
 In Final Cut: **File ▸ Import ▸ XML…** and pick `ChromeTitles.fcpxml`. The XML points at the
-`.mov` files by absolute path, so render on the Mac you edit on (or relink when FCP asks).
+`.mov` files by absolute path, so render on the Mac you edit on, or if the clips were rendered
+elsewhere run `node render.mjs fcpxml --media /path/to/folder/with/the/movs` to rewrite it
+(or relink when FCP asks).
+
+The flare clips carry their brightness as alpha, so they sit correctly with the default
+**Normal** blend; lower a flare clip's opacity to dial it back, switch it to **Add** for a hotter
+glint, or disable it for bare chrome.
 Each card is its own clip, so you can slide, trim, retime, scale, colour-correct or swap the
 background without re-rendering.
 
@@ -24,7 +31,8 @@ Needs Node, ffmpeg, and Playwright with Chromium.
 npm install
 node render.mjs sheet --scale 0.5        # contact sheet of every card  -> out/stills/
 node render.mjs still --card 4 --t 7.6   # one full-res frame
-node render.mjs render                   # everything
+node render.mjs render                   # everything (4K: roughly 4 s per frame on a 4-core CPU)
+node render.mjs render --scale 0.5       # quick half-size draft
 node render.mjs render --only title_04   # re-render one card (or: --only bg)
 ```
 

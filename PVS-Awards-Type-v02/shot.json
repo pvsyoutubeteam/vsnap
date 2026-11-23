@@ -1,0 +1,18 @@
+{
+  "label": "SALES",
+  "display_value": "1,248",
+  "status": "Illustrative figure for internal creative review",
+  "font": "assets/Archivo-BlackExpanded.ttf",
+  "face_roughness": 0.015,
+  "gold_roughness": 0.2,
+  "x_scale": 1.08,
+  "tracking": 0.94,
+  "extrude": 0.2,
+  "bevel": 0.016,
+  "digit_gap": 0.05,
+  "silk_strength": 1.0,
+  "band_strength": 4.0,
+  "band_width": 0.42,
+  "band_height": 0.26,
+  "gold_bounce": 2.2
+}

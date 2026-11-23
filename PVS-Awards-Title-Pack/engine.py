@@ -499,7 +499,7 @@ _, nt = card("Silk • graded, behind camera", (0, 0, SILK_Z), 48 * fit, 26 * fi
 emit(nt, (1, 1, 1), S["silk_strength"], ramp=((.40, (.12, .115, .105)), (.62, (.46, .45, .43))))
 # One long strip per hero-sized line, so each big row carries a single clean highlight.
 for l in lines:
-    if l["cap"] < hero["cap"] * .85:
+    if l["cap"] < hero["cap"] * .7:
         continue
     band_y = (l["y"] + S["band_height"] * l["cap"]) * mag
     _, nt = card("Strip • long highlight • " + l["text"], (0, band_y, SILK_Z - .5), 30 * fit, S["band_width"] * l["cap"] / 1.5)
